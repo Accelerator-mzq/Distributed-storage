@@ -22,7 +22,7 @@ int get_buf(char **src, int len)
     return 0;
 }
 
-int upload_file(char *src, int len)
+int upload_file(char *src, int len, char **s_filename)
 {
     int i;
     int len1 = 0;
@@ -83,7 +83,8 @@ int upload_file(char *src, int len)
     fp = fopen(filename, "wb+");
     fwrite(p, 1, len2, fp);
 
-    free(filename);
+    *s_filename = filename;
+
     fclose(fp);
 
 

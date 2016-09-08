@@ -11,9 +11,12 @@
 int get_buf(char **src, int len);
 
 //提取出数据中文件名，二进制数据，完成上传
-int upload_file(char *src, int len);
+int upload_file(char *src, int len, char **s_filename);
 
 //从二进制字符串中查找子串
 char* memstr(char* full_data, int full_data_len, char* substr);
+
+//使用fdfs将文件传入storage
+//int fdfs_client();
 
 

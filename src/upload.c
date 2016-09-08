@@ -53,6 +53,7 @@ int main ()
     int count = 0;
     int ret = 0;
     char *buf = NULL;
+    char *filename = NULL;
     
 
     while (FCGI_Accept() >= 0) 
@@ -103,12 +104,15 @@ int main ()
             *p++ = '\0';
 
             //完成上传文件操作，提取数据
-            if (upload_file(buf, len) != 0)
+            if (upload_file(buf, len, &filename) != 0)
             {
                 LOG(UPLOAD_MODULE, UPLOAD_PROC, "upload_file error");
                 ret = -1;
                 goto END;
             }
+
+            //使用fdfs传入storage
+            //fdfs_client(filename);
 
 
             printf("\n</pre><p>\n");
@@ -121,6 +125,7 @@ int main ()
 
 END:
     free(buf);
+    free(filename);
     if (ret == -1)
     {
         return -1;
