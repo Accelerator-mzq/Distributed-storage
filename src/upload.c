@@ -54,6 +54,7 @@ int main ()
     int ret = 0;
     char *buf = NULL;
     char *filename = NULL;
+    char file_id[256] = {0};
     
 
     while (FCGI_Accept() >= 0) 
@@ -112,7 +113,8 @@ int main ()
             }
 
             //使用fdfs传入storage
-            //fdfs_client(filename);
+            fdfs_client(filename, file_id);
+            LOG(UPLOAD_MODULE, UPLOAD_PROC, "file_id:%s", file_id);
 
 
             printf("\n</pre><p>\n");

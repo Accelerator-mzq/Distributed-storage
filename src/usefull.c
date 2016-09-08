@@ -3,7 +3,10 @@
 
 #include "usefull.h"
 
+#define FDFS_CLIENT_MODULE "fdfs_client"
+#define FDFS_CLIENT_PROC   "fdfs_test"
 
+#define FILE_ID_LEN     (256)
 
 int get_buf(char **src, int len)
 {
@@ -119,4 +122,57 @@ char* memstr(char* full_data, int full_data_len, char* substr)
         cur++;
     }
     return NULL;
+}
+
+int fdfs_client(char *s_filename, char *s_file_id)
+{
+    char *file_name = s_filename;
+    char *file_id = s_file_id;
+    pid_t pid;
+    LOG(FDFS_CLIENT_MODULE, FDFS_CLIENT_PROC, "file_name:%s", file_name);
+
+
+    int pfd[2] = {0};
+
+    if (pipe(pfd) < 0) {
+        LOG(FDFS_CLIENT_MODULE, FDFS_CLIENT_PROC, "[errror], pipe error");
+        exit(1);
+    }
+
+    pid = fork();
+    if (pid < 0)
+    {
+        LOG(FDFS_CLIENT_MODULE, FDFS_CLIENT_PROC, "[errror], fork error");
+    }
+
+    if (pid == 0) {
+        //chlid
+        //关闭读端
+        close(pfd[0]);
+
+        //将标准输出 重定向到管道中
+        dup2(pfd[1], STDOUT_FILENO);
+
+        //exec
+        if (execlp("fdfs_upload_file", "fdfs_upload_file", "./conf/client.conf", file_name, NULL) == -1)
+        {
+            LOG(FDFS_CLIENT_MODULE, FDFS_CLIENT_PROC, "exec fdfs_upload_file error");
+            return -1;
+        }
+    }
+    else {
+        //parent
+        //关闭写端
+        close(pfd[1]);
+
+        wait(NULL);
+
+        //从管道中去读数据
+        read(pfd[0], file_id, FILE_ID_LEN);
+
+
+        LOG(FDFS_CLIENT_MODULE, FDFS_CLIENT_PROC, "file_id = [%s]", file_id);
+    }
+
+    return 0;
 }
