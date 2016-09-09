@@ -2,11 +2,17 @@
 #include <stdlib.h>
 
 #include "usefull.h"
+#include "redis_op.h"
+#include <hiredis.h>
+
 
 #define FDFS_CLIENT_MODULE "fdfs_client"
 #define FDFS_CLIENT_PROC   "fdfs_test"
 
-#define FILE_ID_LEN     (256)
+#define REDIS_WRITE_MODULE  "Redis-write"
+#define REDIS_WRITE_PROC   "Re-wt"
+
+
 
 int get_buf(char **src, int len)
 {
@@ -25,7 +31,7 @@ int get_buf(char **src, int len)
     return 0;
 }
 
-int upload_file(char *src, int len, char **s_filename)
+int upload_file(char *src, int len, char **s_filename, int *filenameBufLen)
 {
     int i;
     int len1 = 0;
@@ -64,6 +70,7 @@ int upload_file(char *src, int len, char **s_filename)
     memset(filename, 0, nameLen+1);
     strncpy(filename, p, nameLen);
     filename[nameLen] = '\0';
+    *filenameBufLen = nameLen + 1;
 
 
     //提取出图片的二进制数据
@@ -129,7 +136,6 @@ int fdfs_client(char *s_filename, char *s_file_id)
     char *file_name = s_filename;
     char *file_id = s_file_id;
     pid_t pid;
-    LOG(FDFS_CLIENT_MODULE, FDFS_CLIENT_PROC, "file_name:%s", file_name);
 
 
     int pfd[2] = {0};
@@ -175,4 +181,73 @@ int fdfs_client(char *s_filename, char *s_file_id)
     }
 
     return 0;
+}
+
+int write_redis(char *file_id, char *fdfs_file_url, char *filename, char *usr)
+{
+    redisContext *conn = NULL;
+    char *ip = "127.0.0.1";
+    char *port = "6379";
+    char *redis_value_buf= NULL;
+    char create_time[TIME_STRING_LEN] = {0};
+    char suffix[SUFFIX_LEN] = {0};
+
+    int retn = 0;
+
+    conn = rop_connectdb_nopwd(ip, port);
+    if (conn == NULL)
+    {
+        LOG(REDIS_WRITE_MODULE, REDIS_WRITE_PROC, "conn redis server error");
+        exit(1);
+    }
+
+    printf("connect server succ!\n");
+
+    redis_value_buf = (char *)malloc(VALUES_ID_SIZE);
+    if (redis_value_buf == NULL)
+    {
+        LOG(REDIS_WRITE_MODULE, REDIS_WRITE_PROC, "redis_value_buf malloc error");
+        retn = -1;
+        goto END;
+    }
+    memset(redis_value_buf, 0, VALUES_ID_SIZE);
+
+    
+    //make redis_value_buf
+    strcat(redis_value_buf, file_id);
+    strcat(redis_value_buf, REDIS_DILIMIT);
+
+    //url
+    strcat(redis_value_buf, fdfs_file_url);
+    strcat(redis_value_buf, REDIS_DILIMIT);
+
+    //file_name
+    strcat(redis_value_buf, filename);
+    strcat(redis_value_buf, REDIS_DILIMIT);
+
+    //create_time
+    time_t timep;
+    time(&timep);
+    strcpy(create_time, ctime(&timep));
+
+    strcat(redis_value_buf, create_time);
+    strcat(redis_value_buf, REDIS_DILIMIT);
+
+    //user
+    strcat(redis_value_buf, usr);
+    strcat(redis_value_buf, REDIS_DILIMIT);
+
+    //type
+    strcpy(suffix, "2");
+    strcat(redis_value_buf, suffix);
+
+    //将文件信息插入到FILE_INFO_LIST中
+    rop_list_push(conn, FILE_INFO_LIST, redis_value_buf);
+
+    free(redis_value_buf);
+
+END:
+    rop_disconnect(conn);
+
+	return retn;
 }

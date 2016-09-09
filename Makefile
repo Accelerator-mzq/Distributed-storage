@@ -46,7 +46,7 @@ $(fcgi_test): test/fcgi_test.o src/make_log.o
 	$(CC) $^ -o $@ $(LIBS)
 
 #upload程序
-$(upload): src/upload.o src/usefull.o src/make_log.o
+$(upload): src/upload.o src/usefull.o src/redis_op.o src/make_log.o
 	$(CC) $^ -o $@ $(LIBS)
 
 #cJSON_test程序

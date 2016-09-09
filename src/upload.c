@@ -19,6 +19,8 @@ static const char rcsid[] = "$Id: echo.c,v 1.5 1999/07/28 00:29:37 roberts Exp $
 #include <stdlib.h>
 #include <string.h>
 
+#include <hiredis.h>
+
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -55,7 +57,10 @@ int main ()
     char *buf = NULL;
     char *filename = NULL;
     char file_id[256] = {0};
+    char fdfs_file_url[256] = {0};
+    char usr[64] = {0};
     
+    int filenameBufLen = 0;
 
     while (FCGI_Accept() >= 0) 
     {
@@ -87,7 +92,7 @@ int main ()
             {
                 LOG(UPLOAD_MODULE, UPLOAD_PROC, "get_buf error");
                 ret = -1;
-                goto END;
+                goto FAIL;
             }
             p = buf;
 
@@ -105,16 +110,27 @@ int main ()
             *p++ = '\0';
 
             //完成上传文件操作，提取数据
-            if (upload_file(buf, len, &filename) != 0)
+            if (upload_file(buf, len, &filename, &filenameBufLen) != 0)
             {
                 LOG(UPLOAD_MODULE, UPLOAD_PROC, "upload_file error");
-                ret = -1;
                 goto END;
             }
 
             //使用fdfs传入storage
-            fdfs_client(filename, file_id);
+            if (fdfs_client(filename, file_id) != 0)
+            {
+                LOG(UPLOAD_MODULE, UPLOAD_PROC, "fdfs_client error");
+                goto END;
+            }
             LOG(UPLOAD_MODULE, UPLOAD_PROC, "file_id:%s", file_id);
+
+            //将得到数据写入到Redis数据库中
+            strcpy(fdfs_file_url, "12345678");
+            strcpy(usr, "user");
+            if (write_redis(file_id, fdfs_file_url, filename, usr) != 0)
+            {
+                LOG(UPLOAD_MODULE, UPLOAD_PROC, "write_redis error");
+            }
 
 
             printf("\n</pre><p>\n");
@@ -123,15 +139,15 @@ int main ()
 
         PrintEnv("Request environment", environ);
         PrintEnv("Initial environment", initialEnv);
+END:
+        memset(filename, 0, filenameBufLen);
+        memset(file_id, 0, 256);
+        memset(fdfs_file_url, 0, 256);
+        memset(usr, 0, 64);
     } /* while */
 
-END:
-    free(buf);
-    free(filename);
-    if (ret == -1)
-    {
-        return -1;
-    }
-    return 0;
+FAIL:
+
+    return ret;
 }
 
