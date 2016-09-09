@@ -59,6 +59,9 @@ int main ()
     char file_id[256] = {0};
     char fdfs_file_url[256] = {0};
     char usr[64] = {0};
+    char cmd[64] = {0};
+    char fromId[64] = {0};
+    char cnt[64] = {0};
     
     int filenameBufLen = 0;
 
@@ -72,6 +75,19 @@ int main ()
                 "<title>FastCGI echo</title>"
                 "<h1>FastCGI echo</h1>\n"
                 "Request number %d,  Process ID: %d<p>\n", ++count, getpid());
+
+        if (get_usr(usr) < 0)
+        {
+            break;
+        }
+        get_cmd(cmd);
+        get_fromId(fromId);
+        get_cnt(cnt);
+
+        LOG(UPLOAD_MODULE, UPLOAD_PROC, "get_usr:%s", usr);
+        LOG(UPLOAD_MODULE, UPLOAD_PROC, "get_cmd:%s", cmd);
+        LOG(UPLOAD_MODULE, UPLOAD_PROC, "get_fromId:%s", fromId);
+        LOG(UPLOAD_MODULE, UPLOAD_PROC, "get_cnt:%s", cnt);
 
         if (contentLength != NULL) {
             len = strtol(contentLength, NULL, 10);

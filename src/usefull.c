@@ -251,3 +251,123 @@ END:
 
 	return retn;
 }
+
+//得到cmd
+int get_cmd(char *cmd)
+{
+    char *query_string = getenv("QUERY_STRING");
+
+    //得到cmd
+    get_query_string(query_string, "cmd", cmd, NULL);
+    if (strlen(cmd) == 0)
+    {
+        LOG(GET_CMD_MODULE, GET_CMD_PROC, "get cmd has no value!");
+    }
+    else
+    {
+        LOG(GET_CMD_MODULE, GET_CMD_PROC, "get cmd = [%s]", cmd);
+    }
+    
+    return 0;
+}
+
+//得到fromId--从哪个Id开始
+int get_fromId(char *fromId)
+{
+    char *query_string = getenv("QUERY_STRING");
+
+    //得到fromId
+    get_query_string(query_string, "fromId", fromId, NULL);
+    if (strlen(fromId) == 0)
+    {
+        LOG(GET_FROMID_MODULE, GET_FROMID_PROC, "get fromId has no value!");
+    }
+    else
+    {
+        LOG(GET_FROMID_MODULE, GET_FROMID_PROC, "get fromId = [%s]", fromId);
+    }
+    
+    return 0;
+}
+
+//得到count--一共显示几个文件
+int get_cnt(char *cnt)
+{
+    char *query_string = getenv("QUERY_STRING");
+
+    //得到count
+    get_query_string(query_string, "count", cnt, NULL);
+    if (strlen(cnt) == 0)
+    {
+        LOG(GET_COUNT_MODULE, GET_COUNT_PROC, "get count has no value!");
+    }
+    else
+    {
+        LOG(GET_COUNT_MODULE, GET_COUNT_PROC, "get count = [%s]", cnt);
+    }
+    
+    return 0;
+}
+
+//得到usr--用户名
+int get_usr(char *usr)
+{
+    char *query_string = getenv("QUERY_STRING");
+
+    //得到count
+    get_query_string(query_string, "user", usr, NULL);
+    if (strlen(usr) == 0)
+    {
+        LOG(GET_USR_MODULE, GET_USR_PROC, "get user has no value!");
+    }
+    else
+    {
+        LOG(GET_USR_MODULE, GET_USR_PROC, "get user = [%s]", usr);
+    }
+    
+    return 0;
+}
+
+//从query_string字符串取得参数的值
+int get_query_string(char *query, char *key, char *value, int *value_len_p)
+{
+    char *tmp = NULL;
+    char *end = NULL;
+    int ret = 0;
+    int keyLen = 0;
+    int valueLen = 0;
+
+
+    tmp = strstr(query, key);
+    if (tmp == NULL)
+    {
+        LOG(QUERY_STRING_MODULE, QUERY_STRING_PROC, "NOT FOUND %s key", key);
+        ret = -1;
+        goto END;
+    }
+
+    keyLen = strlen(key);
+    tmp += keyLen;
+    tmp++;
+
+    end = tmp;
+
+    while ('\0' != *end && '#' != *end && '&' != *end)
+    {
+        end++;
+    }
+
+    valueLen = end - tmp;
+
+    strncpy(value, tmp, valueLen);
+    value[valueLen] = '\0';
+
+    if (value_len_p != NULL)
+    {
+        *value_len_p = valueLen;
+    }
+
+
+END:
+    return ret;
+}
