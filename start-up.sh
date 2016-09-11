@@ -5,11 +5,11 @@
 #sudo iptables -A INPUT -p tcp --dport 3306 -j ACCEPT
 
 #启动本地tracker
-#sudo /usr/bin/fdfs_trackerd ./conf/tracker.conf 
+sudo /usr/bin/fdfs_trackerd ./conf/tracker.conf 
 #启动本地storage
-#sudo /usr/bin/fdfs_storaged ./conf/storage.conf
+sudo /usr/bin/fdfs_storaged ./conf/storage.conf
 
 #spawn-fcgi -a 127.0.0.1 -p 8011 -f ./test/fcgi_test
 spawn-fcgi -a 127.0.0.1 -p 8012 -f ./src/upload
-
+spawn-fcgi -a 127.0.0.1 -p 8085 -f ./src/data_cgi
 #sudo /usr/local/nginx/sbin/nginx -s reload

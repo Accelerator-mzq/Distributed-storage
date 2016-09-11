@@ -10,6 +10,7 @@ src = $(wildcard *.c ./test/*.c ./src/*.c)
 #将当前目录下所有的.c  转换成.o给obj
 obj = $(patsubst %.c, %.o, $(src))
 
+data_cgi=src/data_cgi
 my_test_cJSON=test/my_test_cJSON
 cJSON_test=test/cJSON_test
 upload=src/upload
@@ -18,7 +19,7 @@ redis_test=test/redis_test
 fdfs_test=test/fdfs_test
 test_main=test/test_main
 
-target=$(test_main) $(fdfs_test) $(redis_test) $(fcgi_test) $(upload) $(cJSON_test) $(my_test_cJSON)
+target=$(test_main) $(fdfs_test) $(redis_test) $(fcgi_test) $(upload) $(cJSON_test) $(my_test_cJSON) $(data_cgi)
 
 
 ALL:$(target)
@@ -55,6 +56,10 @@ $(cJSON_test): test/cJSON_test.o src/cJSON.o src/make_log.o
 
 #my_test_cJSON程序
 $(my_test_cJSON): test/my_test_cJSON.o src/cJSON.o src/make_log.o 
+	$(CC) $^ -o $@ $(LIBS)
+
+#data_cgi程序
+$(data_cgi): src/data_cgi.o src/data_use.o src/usefull.o src/redis_op.o src/cJSON.o src/make_log.o 
 	$(CC) $^ -o $@ $(LIBS)
 
 #clean指令

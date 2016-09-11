@@ -12,6 +12,7 @@
 #include "fcgi_stdio.h"
 #include "make_log.h"
 #include "redis_op.h"
+#include "cJSON.h"
 
 #define UPLOAD_MODULE "upload"
 #define UPLOAD_PROC   "upload_test"
@@ -34,6 +35,12 @@
 #define GET_COUNT_MODULE      "get_count"
 #define GET_COUNT_PROC        "count"
 
+#define READ_REDIS_MODULE   "read_redis_json"
+#define READ_REDIS_PROC     "read_redis_json_test"
+
+#define GET_REDIS_VALUE_MODULE "get_redis_value" 
+#define GET_REDIS_VALUE_PROC  "get_redis_v_test"
+
 #define FILE_ID_LEN     (256)
 #define TIME_STRING_LEN (64)
 #define SUFFIX_LEN      (8)
@@ -55,6 +62,12 @@ int fdfs_client(char *s_filename, char *s_fild_id);
 //将得到的数据写入到Redis数据库中
 int write_redis(char *file_id, char *url, char *filename, char *usr);
 
+//从query_string字符串取得参数的值
+int get_query_string(char *query, char *key, char *value, int *value_len_p);
+
+//得到usr--用户名
+int get_usr(char *usr);
+
 //得到cmd
 int get_cmd(char *cmd);
 
@@ -64,8 +77,4 @@ int get_fromId(char *fromId);
 //得到count--一共显示几个文件
 int get_cnt(char *count);
 
-//得到usr--用户名
-int get_usr(char *usr);
 
-//从query_string字符串取得参数的值
-int get_query_string(char *query, char *key, char *value, int *value_len_p);

@@ -3,6 +3,7 @@
 
 #include "usefull.h"
 #include "redis_op.h"
+#include "cJSON.h"
 #include <hiredis.h>
 
 
@@ -136,6 +137,7 @@ int fdfs_client(char *s_filename, char *s_file_id)
     char *file_name = s_filename;
     char *file_id = s_file_id;
     pid_t pid;
+    int file_id_len = 0;
 
 
     int pfd[2] = {0};
@@ -175,6 +177,8 @@ int fdfs_client(char *s_filename, char *s_file_id)
 
         //从管道中去读数据
         read(pfd[0], file_id, FILE_ID_LEN);
+        file_id_len = strlen(file_id);
+        file_id[file_id_len-1] = '\0';
 
 
         LOG(FDFS_CLIENT_MODULE, FDFS_CLIENT_PROC, "file_id = [%s]", file_id);
@@ -193,6 +197,7 @@ int write_redis(char *file_id, char *fdfs_file_url, char *filename, char *usr)
     char suffix[SUFFIX_LEN] = {0};
 
     int retn = 0;
+    int create_time_len = 0;
 
     conn = rop_connectdb_nopwd(ip, port);
     if (conn == NULL)
@@ -212,14 +217,16 @@ int write_redis(char *file_id, char *fdfs_file_url, char *filename, char *usr)
     }
     memset(redis_value_buf, 0, VALUES_ID_SIZE);
 
-    
+
     //make redis_value_buf
     strcat(redis_value_buf, file_id);
     strcat(redis_value_buf, REDIS_DILIMIT);
+    LOG(REDIS_WRITE_MODULE, REDIS_WRITE_PROC, "redis_value_buf--id--:%s", redis_value_buf);
 
     //url
     strcat(redis_value_buf, fdfs_file_url);
     strcat(redis_value_buf, REDIS_DILIMIT);
+    LOG(REDIS_WRITE_MODULE, REDIS_WRITE_PROC, "redis_value_buf--url--:%s", redis_value_buf);
 
     //file_name
     strcat(redis_value_buf, filename);
@@ -229,6 +236,8 @@ int write_redis(char *file_id, char *fdfs_file_url, char *filename, char *usr)
     time_t timep;
     time(&timep);
     strcpy(create_time, ctime(&timep));
+    create_time_len = strlen(create_time); 
+    create_time[create_time_len-1] = '\0';
 
     strcat(redis_value_buf, create_time);
     strcat(redis_value_buf, REDIS_DILIMIT);
@@ -249,7 +258,7 @@ int write_redis(char *file_id, char *fdfs_file_url, char *filename, char *usr)
 END:
     rop_disconnect(conn);
 
-	return retn;
+    return retn;
 }
 
 //得到cmd
@@ -267,7 +276,7 @@ int get_cmd(char *cmd)
     {
         LOG(GET_CMD_MODULE, GET_CMD_PROC, "get cmd = [%s]", cmd);
     }
-    
+
     return 0;
 }
 
@@ -286,7 +295,7 @@ int get_fromId(char *fromId)
     {
         LOG(GET_FROMID_MODULE, GET_FROMID_PROC, "get fromId = [%s]", fromId);
     }
-    
+
     return 0;
 }
 
@@ -305,7 +314,7 @@ int get_cnt(char *cnt)
     {
         LOG(GET_COUNT_MODULE, GET_COUNT_PROC, "get count = [%s]", cnt);
     }
-    
+
     return 0;
 }
 
@@ -324,7 +333,7 @@ int get_usr(char *usr)
     {
         LOG(GET_USR_MODULE, GET_USR_PROC, "get user = [%s]", usr);
     }
-    
+
     return 0;
 }
 
@@ -371,3 +380,5 @@ int get_query_string(char *query, char *key, char *value, int *value_len_p)
 END:
     return ret;
 }
+
+
