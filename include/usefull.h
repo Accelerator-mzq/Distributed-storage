@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 
 #include <hiredis.h>
+#include <ctype.h>
 
 #include "fcgi_stdio.h"
 #include "make_log.h"
@@ -41,9 +42,18 @@
 #define GET_REDIS_VALUE_MODULE "get_redis_value" 
 #define GET_REDIS_VALUE_PROC  "get_redis_v_test"
 
+#define GET_URL_MODULE      "get_url"
+#define GET_URL_PROC        "get_url"
+
+#define GET_SUFFIX_MODULE   "get_suffix"
+#define GET_SUFFIX_PROC     "suffix"
+
+#define FDFS_CLIENT_CONF    "./conf/client.conf"
+
 #define FILE_ID_LEN     (256)
 #define TIME_STRING_LEN (64)
 #define SUFFIX_LEN      (8)
+#define TEMP_BUF_MAX_LEN  (256)
 
 #define REDIS_DILIMIT   "||"
 
@@ -77,4 +87,14 @@ int get_fromId(char *fromId);
 //得到count--一共显示几个文件
 int get_cnt(char *count);
 
+//得到file_id
+int get_file_id(char *file_id);
 
+//去掉两边空白字符得到合法字符串
+int trim_space(char *src);
+
+//得到上传文件的url
+int get_url(char *s_file_id, char *s_url);
+
+//得到上传文件的后缀名
+int get_file_suffix(char *s_filename, char *s_suffix);

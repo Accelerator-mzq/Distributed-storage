@@ -1,6 +1,6 @@
 
 CC=gcc
-CPPFLAGS= -I./include -I/usr/local/include/hiredis/
+CPPFLAGS= -I./include -I/usr/local/include/hiredis/ 
 CFLAGS=-Wall 
 LIBS=-lhiredis -lpthread -lfcgi -lm
 

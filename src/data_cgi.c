@@ -42,10 +42,15 @@ int main ()
     char cmd[20] = {0};
     char fromId[64] = {0};
     char cnt[5] = {0};
+    char fileId[FILE_ID_LEN] = {0};
 
     while (FCGI_Accept() >= 0) {
 #if 1
         //char *query = getenv("QUERY_STRING");
+        memset(cmd, 0, 20);
+        memset(fromId, 0, 64);
+        memset(cnt, 0, 5);
+        memset(fileId, 0, FILE_ID_LEN);
         
         get_cmd(cmd);
         
@@ -59,6 +64,27 @@ int main ()
             printf("\r\n");
             
             read_redis_to_json(atoi(fromId), atoi(cnt), cmd);
+
+        }
+        else if (strcmp(cmd, "increase") == 0)
+        {
+            //char *query = getenv("QUERY_STRING");
+            //文件被点击
+
+            //得到被点击的fileId
+            get_file_id(fileId);
+            LOG(DATA_LOG_MODULE, DATA_LOG_PROC, "=== fileId:%s, cmd:%s", fileId, cmd);
+
+            if (str_replace(fileId, "%2F", "/") != 0)
+            {
+                LOG(DATA_LOG_MODULE, DATA_LOG_PROC, "str_replace error");
+                return -1;
+            }
+
+            increase_file_pv(fileId);
+
+	        printf("Content-type: text/html\r\n");
+            printf("\r\n");
         }
 #endif
 

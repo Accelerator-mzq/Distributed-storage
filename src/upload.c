@@ -39,20 +39,8 @@ extern char **environ;
 #define UPLOAD_PROC   "upload_test"
 
 
-static void PrintEnv(char *label, char **envp)
-{
-    printf("%s:<br>\n<pre>\n", label);
-    for ( ; *envp != NULL; envp++) {
-        printf("%s\n", *envp);
-    }
-    printf("</pre><p>\n");
-}
-
-
 int main ()
 {
-    char **initialEnv = environ;
-    int count = 0;
     int ret = 0;
     char *buf = NULL;
     char *filename = NULL;
@@ -68,10 +56,7 @@ int main ()
         int len;
 
         printf("Content-type: text/html\r\n"
-                "\r\n"
-                "<title>FastCGI echo</title>"
-                "<h1>FastCGI echo</h1>\n"
-                "Request number %d,  Process ID: %d<p>\n", ++count, getpid());
+                "\r\n");
 
         if (get_usr(usr) < 0)
         {
@@ -131,21 +116,28 @@ int main ()
             }
             LOG(UPLOAD_MODULE, UPLOAD_PROC, "file_id:%s", file_id);
 
+            //删除临时文件
+            unlink(filename);
+
+            //得到上传文件的url
+            if (get_url(file_id, fdfs_file_url) != 0)
+            {
+                LOG(UPLOAD_MODULE, UPLOAD_PROC, "get_url error");
+            }
+
+
             //将得到数据写入到Redis数据库中
-            strcpy(fdfs_file_url, "12345678");
             strcpy(usr, "user");
             if (write_redis(file_id, fdfs_file_url, filename, usr) != 0)
             {
                 LOG(UPLOAD_MODULE, UPLOAD_PROC, "write_redis error");
             }
+            LOG(UPLOAD_MODULE, UPLOAD_PROC, "fdfs_file_url:%s", fdfs_file_url);
 
 
-            printf("\n</pre><p>\n");
         }
 
 
-        PrintEnv("Request environment", environ);
-        PrintEnv("Initial environment", initialEnv);
 END:
         memset(filename, 0, filenameBufLen);
         memset(file_id, 0, 256);

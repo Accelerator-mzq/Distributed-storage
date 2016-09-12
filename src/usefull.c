@@ -14,6 +14,43 @@
 #define REDIS_WRITE_PROC   "Re-wt"
 
 
+int trim_space(char *src)
+{
+    char *str = NULL;
+    char *begin = NULL;
+    char *end = NULL;
+
+    int len = 0;
+
+    if ((str = NULL))
+    {
+        printf("src = NULL\n");
+        return -1;
+    }
+
+    str = src;
+    begin = str;
+
+    end = strchr(begin, '\0');
+    end--;
+
+    while (isspace(*begin) && *begin != '\0')
+    {
+        begin++;
+    }
+
+    while (isspace(*end) && (end - begin) > 0)
+    {
+        end--;
+    }
+
+    len = end - begin + 1;
+    strncpy(str, begin, len);
+    str[len] = '\0';
+
+    return 0;
+
+}
 
 int get_buf(char **src, int len)
 {
@@ -137,7 +174,6 @@ int fdfs_client(char *s_filename, char *s_file_id)
     char *file_name = s_filename;
     char *file_id = s_file_id;
     pid_t pid;
-    int file_id_len = 0;
 
 
     int pfd[2] = {0};
@@ -162,7 +198,7 @@ int fdfs_client(char *s_filename, char *s_file_id)
         dup2(pfd[1], STDOUT_FILENO);
 
         //exec
-        if (execlp("fdfs_upload_file", "fdfs_upload_file", "./conf/client.conf", file_name, NULL) == -1)
+        if (execlp("fdfs_upload_file", "fdfs_upload_file", FDFS_CLIENT_CONF, file_name, NULL) == -1)
         {
             LOG(FDFS_CLIENT_MODULE, FDFS_CLIENT_PROC, "exec fdfs_upload_file error");
             return -1;
@@ -177,8 +213,7 @@ int fdfs_client(char *s_filename, char *s_file_id)
 
         //从管道中去读数据
         read(pfd[0], file_id, FILE_ID_LEN);
-        file_id_len = strlen(file_id);
-        file_id[file_id_len-1] = '\0';
+        trim_space(file_id);
 
 
         LOG(FDFS_CLIENT_MODULE, FDFS_CLIENT_PROC, "file_id = [%s]", file_id);
@@ -197,7 +232,6 @@ int write_redis(char *file_id, char *fdfs_file_url, char *filename, char *usr)
     char suffix[SUFFIX_LEN] = {0};
 
     int retn = 0;
-    int create_time_len = 0;
 
     conn = rop_connectdb_nopwd(ip, port);
     if (conn == NULL)
@@ -219,6 +253,7 @@ int write_redis(char *file_id, char *fdfs_file_url, char *filename, char *usr)
 
 
     //make redis_value_buf
+    //file_id
     strcat(redis_value_buf, file_id);
     strcat(redis_value_buf, REDIS_DILIMIT);
     LOG(REDIS_WRITE_MODULE, REDIS_WRITE_PROC, "redis_value_buf--id--:%s", redis_value_buf);
@@ -233,11 +268,10 @@ int write_redis(char *file_id, char *fdfs_file_url, char *filename, char *usr)
     strcat(redis_value_buf, REDIS_DILIMIT);
 
     //create_time
-    time_t timep;
-    time(&timep);
-    strcpy(create_time, ctime(&timep));
-    create_time_len = strlen(create_time); 
-    create_time[create_time_len-1] = '\0';
+    time_t now;
+    now = time(NULL);
+    strftime(create_time, TIME_STRING_LEN, "%Y-%m-%d %H-%M:%S", localtime(&now));
+    trim_space(create_time);
 
     strcat(redis_value_buf, create_time);
     strcat(redis_value_buf, REDIS_DILIMIT);
@@ -247,11 +281,15 @@ int write_redis(char *file_id, char *fdfs_file_url, char *filename, char *usr)
     strcat(redis_value_buf, REDIS_DILIMIT);
 
     //type
-    strcpy(suffix, "2");
+    //得到上传文件的后缀名
+    get_file_suffix(filename, suffix);
     strcat(redis_value_buf, suffix);
 
     //将文件信息插入到FILE_INFO_LIST中
     rop_list_push(conn, FILE_INFO_LIST, redis_value_buf);
+
+    //将文件信息插入到FILE_HOT_ZSET中，默认的权值为1
+    rop_zset_increment(conn, FILE_HOT_ZSET, file_id);
 
     free(redis_value_buf);
 
@@ -337,6 +375,25 @@ int get_usr(char *usr)
     return 0;
 }
 
+//得到file_id
+int get_file_id(char *file_id)
+{
+    char *query_string = getenv("QUERY_STRING");
+
+    //得到file_id
+    get_query_string(query_string, "fileId", file_id, NULL);
+    if (strlen(file_id) == 0)
+    {
+        LOG(GET_FROMID_MODULE, GET_FROMID_PROC, "get file_id has no value!");
+    }
+    else
+    {
+        LOG(GET_FROMID_MODULE, GET_FROMID_PROC, "get file_id = [%s]", file_id);
+    }
+
+    return 0;
+}
+
 //从query_string字符串取得参数的值
 int get_query_string(char *query, char *key, char *value, int *value_len_p)
 {
@@ -382,3 +439,136 @@ END:
 }
 
 
+//得到上传文件的url
+int get_url(char *s_file_id, char *s_url)
+{
+    char *file_id = s_file_id;
+    char *url = s_url;
+    char *begin = NULL;
+    char *end = NULL;
+
+    char fdfs_buf[TEMP_BUF_MAX_LEN] = {0};
+    char key[] = "source ip address:";
+    char ip_buf[16] = {0};
+
+    pid_t pid;
+
+    int key_len = 0;
+    int ip_len = 0;
+    int pfd[2] = {0};
+    int retn = 0;
+
+    if (pipe(pfd) < 0) {
+        LOG(GET_URL_MODULE, GET_URL_PROC, "[errror], pipe error");
+        retn = -1;
+        goto END;
+    }
+
+    key_len = strlen(key);
+    pid = fork();
+    if (pid < 0)
+    {
+        LOG(GET_URL_MODULE, GET_URL_PROC, "[errror], fork error");
+        retn = -1;
+        goto END;
+    }
+
+    if (pid == 0) {
+        //chlid
+        //关闭读端
+        close(pfd[0]);
+
+        //将标准输出 重定向到管道中
+        dup2(pfd[1], STDOUT_FILENO);
+
+        //exec
+        if (execlp("fdfs_file_info", "fdfs_file_info", FDFS_CLIENT_CONF, file_id, NULL) == -1)
+        {
+            LOG(GET_URL_MODULE, GET_URL_PROC, "[errror], execlp error");
+            retn = -1;
+            goto END;
+        }
+    }
+    else 
+    {
+        //parent
+        //关闭写端
+        close(pfd[1]);
+
+        wait(NULL);
+
+        //从管道中去读数据
+        read(pfd[0], fdfs_buf, FILE_ID_LEN);
+        LOG(GET_URL_MODULE, GET_URL_PROC, "fdfs_buf = %s\n", fdfs_buf);
+
+        begin = strstr(fdfs_buf, key);
+        begin = begin + key_len;
+        end = strchr(begin, '\n');
+        ip_len = end - begin;
+        strncpy(ip_buf, begin, ip_len);
+        ip_buf[ip_len] = '\0';
+        trim_space(ip_buf);
+        LOG(GET_URL_MODULE, GET_URL_PROC, "ip_buf = %s\n", ip_buf);
+
+        strcat(url, "http://");
+        strcat(url, ip_buf);
+        strcat(url, "/");
+        strcat(url, file_id);
+        LOG(GET_URL_MODULE, GET_URL_PROC, "url = %s\n", url);
+
+
+    }
+END:
+
+    return retn;
+
+}
+
+//得到上传文件的后缀名
+int get_file_suffix(char *s_filename, char *s_suffix)
+{
+    char *src = s_filename;
+    char *begin = NULL;
+    char *end = NULL;
+    char *suffix = s_suffix;
+
+    char key[] = ".";
+
+    int suffix_len = 0;
+
+    if (s_filename == NULL || s_suffix == NULL)
+    {
+        LOG(GET_SUFFIX_MODULE, GET_SUFFIX_PROC, "s_filename == NULL || s_suffix == NULL");
+        return -1;
+    }
+
+    end = src;
+    while (*end != '\0')
+    {
+        end++;
+    }
+
+    if ((begin = strstr(src, key)) != NULL)
+    {
+        begin++;
+
+        suffix_len = end - begin;
+        if (suffix_len > 0)
+        {
+            strncpy(suffix, begin, suffix_len);
+            suffix[suffix_len] = '\0';
+            LOG(GET_SUFFIX_MODULE, GET_SUFFIX_PROC, "suffix = %s\n", suffix);
+        }
+        else
+        {
+            strncpy(suffix, "null", 5);
+        }
+    }
+    else
+    {
+        strncpy(suffix, "null", 5);
+    }
+
+    return 0;
+
+}
