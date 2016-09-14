@@ -352,6 +352,7 @@ redisContext* rop_connectdb_nopwd(char *ip_str, char* port_str)
 	redisContext *conn = NULL;
 	uint16_t port = atoi(port_str);
 
+	LOG(REDIS_LOG_MODULE, REDIS_LOG_PROC, "ip_str:%s, port:%d", ip_str, port);		
 	conn = redisConnect(ip_str, port);
 
 	if (conn  == NULL) {

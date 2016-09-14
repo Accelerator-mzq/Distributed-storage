@@ -56,6 +56,7 @@ int get_buf(char **src, int len)
 {
     char *buf = NULL;
 
+    LOG(UPLOAD_MODULE, UPLOAD_PROC, "len = %d", len);
     buf = (char *)malloc(sizeof(char) * (len + 1));
     if (buf == NULL)
     {
@@ -69,12 +70,13 @@ int get_buf(char **src, int len)
     return 0;
 }
 
-int upload_file(char *src, int len, char **s_filename, int *filenameBufLen)
+int upload_file(char *src, int len, char *s_filename)
 {
     int i;
     int len1 = 0;
     int len2 = 0;
     int nameLen = 0;
+    int retn = 0;
 
     char *p = NULL;
     char *q = NULL;
@@ -86,7 +88,7 @@ int upload_file(char *src, int len, char **s_filename, int *filenameBufLen)
     FILE *fp;
 
     q = src;
-
+    filename = s_filename;
     //提取出文件的名字
     p = strstr(q, key2);
     p += 10;
@@ -99,17 +101,22 @@ int upload_file(char *src, int len, char **s_filename, int *filenameBufLen)
     q -= 2;
 
     nameLen = q - p;
+    LOG(UPLOAD_MODULE, UPLOAD_PROC, "nameLen:%d", nameLen);
+#if 0
     filename = (char *)malloc(sizeof(nameLen + 1));
     if (filename == NULL)
     {
         LOG(UPLOAD_MODULE, UPLOAD_PROC, "filename malloc error");
         return -1;
     }
+#endif
+    LOG(UPLOAD_MODULE, UPLOAD_PROC, "xxxxxxxxxx");
     memset(filename, 0, nameLen+1);
     strncpy(filename, p, nameLen);
+    LOG(UPLOAD_MODULE, UPLOAD_PROC, "cccccccccc");
     filename[nameLen] = '\0';
-    *filenameBufLen = nameLen + 1;
 
+    LOG(UPLOAD_MODULE, UPLOAD_PROC, "filename:%s", filename);
 
     //提取出图片的二进制数据
     q = src;
@@ -119,6 +126,7 @@ int upload_file(char *src, int len, char **s_filename, int *filenameBufLen)
         q = p+1;
         //LOG(UPLOAD_MODULE, UPLOAD_PROC, "p, p_address:%p",p);
     }
+    LOG(UPLOAD_MODULE, UPLOAD_PROC, "bbbbbbbbbbbbbbbbbbbbbb");
     p += 2;
     q = src;
 
@@ -127,16 +135,42 @@ int upload_file(char *src, int len, char **s_filename, int *filenameBufLen)
 
     s -= 2;
     len2 = s - p;
-
+#if 1
+    LOG(UPLOAD_MODULE, UPLOAD_PROC, "ccccccccccccccc");
+    LOG(UPLOAD_MODULE, UPLOAD_PROC, "len2:%d", len2);
     fp = fopen(filename, "wb+");
+    if (fp == NULL)
+    {
+        LOG(UPLOAD_MODULE, UPLOAD_PROC, "fp == NULL");
+        retn = -1;
+        goto END;
+    }
+    LOG(UPLOAD_MODULE, UPLOAD_PROC, "eeeeeeeeeeeeee");
     fwrite(p, 1, len2, fp);
+    LOG(UPLOAD_MODULE, UPLOAD_PROC, "ddddddddddddddd");
+#endif
+#if 0
+    int fd = 0;
+    LOG(UPLOAD_MODULE, UPLOAD_PROC, "+++++++++++");
+    fd = open(filename, O_CREAT|O_WRONLY, 0644);
+    if (fd < 0)
+    {
+        LOG(UPLOAD_MODULE, UPLOAD_PROC, "open %s error", filename);
+        retn = -1;
+        goto END;
+    }
+    ftruncate(fd, len2);
+    write(fd, p, len2);
+#endif
 
-    *s_filename = filename;
+    //*s_filename = filename;
 
+    //close(fd);
     fclose(fp);
 
+END:
 
-    return 0;
+    return retn;
 
 }
 
@@ -233,12 +267,14 @@ int write_redis(char *file_id, char *fdfs_file_url, char *filename, char *usr)
 
     int retn = 0;
 
+    LOG(REDIS_WRITE_MODULE, REDIS_WRITE_PROC, "222222222222222");
     conn = rop_connectdb_nopwd(ip, port);
     if (conn == NULL)
     {
         LOG(REDIS_WRITE_MODULE, REDIS_WRITE_PROC, "conn redis server error");
         exit(1);
     }
+    LOG(REDIS_WRITE_MODULE, REDIS_WRITE_PROC, "11111111111");
 
     printf("connect server succ!\n");
 

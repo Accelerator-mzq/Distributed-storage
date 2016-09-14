@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 
 #include <hiredis.h>
 #include <ctype.h>
@@ -57,11 +58,12 @@
 
 #define REDIS_DILIMIT   "||"
 
+
 //开辟内存空间，保存上传文件以及htpp协议里的全部数据
 int get_buf(char **src, int len);
 
 //提取出数据中文件名，二进制数据，完成上传
-int upload_file(char *src, int len, char **s_filename, int *filenameBufLen);
+int upload_file(char *src, int len, char *s_filename);
 
 //从二进制字符串中查找子串
 char* memstr(char* full_data, int full_data_len, char* substr);

@@ -10,6 +10,6 @@ sudo /usr/bin/fdfs_trackerd ./conf/tracker.conf
 sudo /usr/bin/fdfs_storaged ./conf/storage.conf
 
 #spawn-fcgi -a 127.0.0.1 -p 8011 -f ./test/fcgi_test
-spawn-fcgi -a 127.0.0.1 -p 8012 -f ./src/upload
-spawn-fcgi -a 127.0.0.1 -p 8085 -f ./src/data_cgi
-#sudo /usr/local/nginx/sbin/nginx -s reload
+spawn-fcgi -a 127.0.0.1 -p 8012 -f  ./src/upload
+spawn-fcgi -a 127.0.0.1 -p 8085 -f  ./src/data_cgi
+#sudo /usr/local/nginx/sbin/nginx 
